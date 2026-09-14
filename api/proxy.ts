@@ -46,8 +46,9 @@ async function handleNodeRequest(req: VercelReq, res: VercelRes) {
       return;
     }
 
-    // 1. Resolve path segments cleanly from req.query.path or fallback to req.url
+    // 1. Resolve path segments cleanly from req.query.path, Vercel headers, or fallback to req.url
     let pathSegments = '';
+    
     if (req.query && req.query.path) {
       if (Array.isArray(req.query.path)) {
         pathSegments = req.query.path.join('/');
@@ -56,11 +57,23 @@ async function handleNodeRequest(req: VercelReq, res: VercelRes) {
       }
     }
 
-    // Defensive fallback: If pathSegments is empty or literal bracket placeholder, parse req.url
-    if (!pathSegments || pathSegments === '[...path]' || pathSegments === '[[...path]]') {
+    // Defensive fallback: check Vercel's x-invoke-path header
+    if (!pathSegments && req.headers && req.headers['x-invoke-path']) {
+      const invokePath = Array.isArray(req.headers['x-invoke-path']) 
+        ? req.headers['x-invoke-path'][0] 
+        : req.headers['x-invoke-path'];
+      pathSegments = invokePath.replace(/^\/api\/?/, '');
+    }
+
+    // Defensive fallback: If pathSegments is empty or literal bracket/proxy placeholder, parse req.url
+    if (!pathSegments || pathSegments === '[...path]' || pathSegments === '[[...path]]' || pathSegments === 'proxy') {
       const rawUrl = req.url || '';
       const pathname = rawUrl.split('?')[0];
       pathSegments = pathname.replace(/^\/api\/?/, '');
+      if (pathSegments === 'proxy') {
+          // If we are literally at /api/proxy and have no path param, something is wrong, fallback to empty string
+          pathSegments = '';
+      }
     }
 
     // Sanitize any leading or trailing slashes
@@ -137,12 +150,25 @@ async function handleEdgeRequest(req: Request): Promise<Response> {
     }
 
     const incomingUrl = new URL(req.url);
-    let targetPath = incomingUrl.pathname.replace(/^\/api\/?/, '');
-    if (targetPath === '[...path]' || targetPath === '[[...path]]') {
-      targetPath = '';
+    
+    let targetPath = incomingUrl.searchParams.get('path') || '';
+    
+    if (!targetPath && req.headers.has('x-invoke-path')) {
+      targetPath = req.headers.get('x-invoke-path')!.replace(/^\/api\/?/, '');
     }
+
+    if (!targetPath || targetPath === '[...path]' || targetPath === '[[...path]]' || targetPath === 'proxy') {
+      targetPath = incomingUrl.pathname.replace(/^\/api\/?/, '');
+      if (targetPath === 'proxy') targetPath = '';
+    }
+
     const cleanPath = targetPath.replace(/^\/+|\/+$/g, '');
-    const targetUrl = `${UPSTREAM_BASE_URL}/${cleanPath}${incomingUrl.search}`;
+    
+    // Remove the synthetic path query parameter before forwarding
+    incomingUrl.searchParams.delete('path');
+    const searchString = incomingUrl.search;
+    
+    const targetUrl = `${UPSTREAM_BASE_URL}/${cleanPath}${searchString}`;
 
     const headers = new Headers();
     headers.set('Content-Type', 'application/json');
