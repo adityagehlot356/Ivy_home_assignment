@@ -9,8 +9,6 @@ import {
   setStoredTokens,
   clearStoredAuth,
   getStoredAccessToken,
-  getStoredApiKey,
-  setStoredApiKey,
   refreshSession,
 } from './api';
 import { LoginResponse, User } from '../types/api';
@@ -19,13 +17,8 @@ let refreshTimer: ReturnType<typeof setInterval> | null = null;
 
 export async function loginUser(
   email: string,
-  password: string,
-  apiKeyOverride?: string
+  password: string
 ): Promise<LoginResponse> {
-  if (apiKeyOverride) {
-    setStoredApiKey(apiKeyOverride);
-  }
-
   const response = await apiClient<LoginResponse>('/auth/login', {
     method: 'POST',
     skipAuth: true,

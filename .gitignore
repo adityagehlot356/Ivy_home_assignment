@@ -5,8 +5,8 @@ node_modules/
 
 # Environment variables (NEVER commit real keys)
 .env
-.env.local
-.env.*.local
+.env.*
+.env*.local
 *.env
 
 # Local audit cache data (can contain API responses with candidate key info)

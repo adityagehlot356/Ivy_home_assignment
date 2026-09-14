@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Key, Lock, Mail, ShieldCheck, UserCheck, Sparkles, AlertCircle } from 'lucide-react';
+import { Lock, Mail, ShieldCheck, UserCheck, AlertCircle } from 'lucide-react';
 
 interface LoginViewProps {
   onLoginSuccess: () => void;
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
-  const { login, apiKey } = useAuth();
+  const { login } = useAuth();
   const [email, setEmail] = useState('demo1@ivy.homes');
   const [password, setPassword] = useState('');
-  const [customKey, setCustomKey] = useState(apiKey || '');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -20,7 +19,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     setLoading(true);
 
     try {
-      await login(email, password, customKey.trim() || undefined);
+      await login(email, password);
       onLoginSuccess();
     } catch (err: any) {
       setError(err.message || 'Authentication failed. Please verify your credentials.');
@@ -137,26 +136,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             </div>
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
-              API KEY (HEADER: X-API-Key)
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                className="input"
-                placeholder="IVY26-XXXXXXXXXXXX"
-                value={customKey}
-                onChange={(e) => setCustomKey(e.target.value)}
-                style={{ paddingLeft: '2.5rem', fontFamily: 'var(--font-mono)' }}
-              />
-              <Key size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} />
-            </div>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem', display: 'block' }}>
-              Key is sent securely via header as verified during audit.
-            </span>
-          </div>
-
           <button
             type="submit"
             className="btn btn-primary"
@@ -185,7 +164,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           gap: '0.5rem'
         }}>
           <ShieldCheck size={16} color="#10b981" />
-          <span>Active Session: Automatic silent background refresh active (&gt;30m persistence).</span>
+          <span>Server-Side Security: API credentials isolated securely on server.</span>
         </div>
       </div>
     </div>

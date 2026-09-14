@@ -1,27 +1,16 @@
 /**
  * Centralized Resilient API Client
- * Built on verified live API behaviors:
- * 1. Requires dual headers: X-API-Key and Authorization: Bearer <access_token>
- * 2. Handles 15-minute token expiration with transparent refresh via POST /auth/refresh
- * 3. Centralized error extraction and network resilience
+ *
+ * Secure Architecture:
+ * 1. All client requests target relative `/api/*` endpoints.
+ * 2. Secret IVY_API_KEY is isolated strictly on the server (Vercel serverless proxy or Vite dev proxy).
+ * 3. Client transmits only `Authorization: Bearer <access_token>` when authenticated.
+ * 4. Transparent token refresh via `/api/auth/refresh` ensures uninterrupted sessions (>30 min).
+ * 5. Centralized error extraction and network resilience.
  */
 
-const DEFAULT_BASE_URL = 'https://solve.ivy.homes';
-
 export function getBaseUrl(): string {
-  return (import.meta as any).env?.VITE_API_BASE_URL || DEFAULT_BASE_URL;
-}
-
-export function getStoredApiKey(): string {
-  return (
-    (import.meta as any).env?.VITE_API_KEY ||
-    localStorage.getItem('ivy_api_key') ||
-    ''
-  );
-}
-
-export function setStoredApiKey(key: string): void {
-  localStorage.setItem('ivy_api_key', key.trim());
+  return '/api';
 }
 
 export function getStoredAccessToken(): string | null {
@@ -63,11 +52,10 @@ function onRefreshed(token: string) {
 }
 
 /**
- * Execute silent token refresh using the verified /auth/refresh endpoint
+ * Silent token refresh via the /api/auth/refresh server-side proxy
  */
 export async function refreshSession(): Promise<string | null> {
   const refreshToken = getStoredRefreshToken();
-  const apiKey = getStoredApiKey();
   if (!refreshToken) return null;
 
   try {
@@ -75,7 +63,6 @@ export async function refreshSession(): Promise<string | null> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(apiKey ? { 'X-API-Key': apiKey } : {}),
       },
       body: JSON.stringify({ refresh_token: refreshToken }),
     });
@@ -101,11 +88,10 @@ interface RequestOptions extends RequestInit {
 }
 
 /**
- * Core apiClient wrapper with auto dual-header injection and automatic refresh interceptor
+ * Core apiClient wrapper with auto Authorization injection and transparent token refresh
  */
 export async function apiClient<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const baseUrl = getBaseUrl();
-  const apiKey = getStoredApiKey();
   const accessToken = getStoredAccessToken();
 
   const headers: Record<string, string> = {
@@ -113,15 +99,14 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
     ...(options.headers as Record<string, string>),
   };
 
-  if (apiKey) {
-    headers['X-API-Key'] = apiKey;
-  }
-
+  // Attach bearer token if authenticated
   if (!options.skipAuth && accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
-  const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+  const url = endpoint.startsWith('http')
+    ? endpoint
+    : `${baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
 
   let response = await fetch(url, {
     ...options,
@@ -144,7 +129,7 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
       }
     }
 
-    // Wait for the token to refresh and retry request
+    // Wait for the token to refresh and retry the failed request
     const retryPromise = new Promise<T>((resolve, reject) => {
       subscribeTokenRefresh(async (newToken) => {
         try {

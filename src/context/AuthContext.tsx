@@ -7,16 +7,13 @@ import {
   isSessionActive,
   setupAutoRefresh,
 } from '../services/auth';
-import { getStoredApiKey, setStoredApiKey } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  apiKey: string;
-  login: (email: string, password: string, apiKeyOverride?: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  updateApiKey: (key: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,7 +22,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(getCurrentUser());
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(isSessionActive());
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [apiKey, setApiKey] = useState<string>(getStoredApiKey());
 
   useEffect(() => {
     const active = isSessionActive();
@@ -37,15 +33,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string, apiKeyOverride?: string) => {
+  const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const resp = await loginUser(email, password, apiKeyOverride);
+      const resp = await loginUser(email, password);
       setUser(resp.user);
       setIsAuthenticated(true);
-      if (apiKeyOverride) {
-        setApiKey(apiKeyOverride);
-      }
     } finally {
       setIsLoading(false);
     }
@@ -62,21 +55,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const updateApiKey = (key: string) => {
-    setStoredApiKey(key);
-    setApiKey(key);
-  };
-
   return (
     <AuthContext.Provider
       value={{
         user,
         isAuthenticated,
         isLoading,
-        apiKey,
         login,
         logout,
-        updateApiKey,
       }}
     >
       {children}

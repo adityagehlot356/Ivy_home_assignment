@@ -198,7 +198,7 @@ export const InsightsView: React.FC = () => {
 
       <div className="flex flex-col gap-3">
         {[
-          { id: 1, ep: '*', cat: 'auth', doc: 'API key via query parameter (?api_key=...)', act: 'Rejected with 401. API key strictly required in X-API-Key header.', sol: 'apiClient injects X-API-Key header on every request.' },
+          { id: 1, ep: '*', cat: 'auth', doc: 'API key via query parameter (?api_key=...)', act: 'Rejected with 401. API key strictly required in X-API-Key header.', sol: 'Server-side proxy injects X-API-Key header securely on every request.' },
           { id: 2, ep: '/auth/login', cat: 'auth', doc: 'Field "token", expires in 24h, no refresh flow', act: 'Field "access_token", expires in 15 mins (900s), refresh flow at /auth/refresh', sol: 'Silent background token refresher keeps session active >30m.' },
           { id: 3, ep: '*', cat: 'auth', doc: 'Collection endpoints only need API key', act: 'All /v1/* endpoints strictly require BOTH X-API-Key and Bearer token', sol: 'User authentication mandatory before collection browsing.' },
           { id: 4, ep: '/v1/listings', cat: 'pagination', doc: 'Pagination via page & limit; envelope has page & page_size', act: 'page parameter quietly ignored; offset & limit used; envelope has offset & has_more', sol: 'Pagination component uses offset calculation exclusively.' },
