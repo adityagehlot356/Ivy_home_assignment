@@ -24,7 +24,10 @@ interface VercelRes extends ServerResponse {
   setHeader: (name: string, value: string) => this;
 }
 
-const UPSTREAM_BASE_URL = process.env.IVY_BASE_URL || 'https://solve.ivy.homes';
+// Strip any trailing slashes and accidentally appended /api from the user's Vercel env variable
+const UPSTREAM_BASE_URL = (process.env.IVY_BASE_URL || 'https://solve.ivy.homes')
+  .replace(/\/+$/, '')
+  .replace(/\/api$/, '');
 
 export default async function handler(req: any, res?: any) {
   // 1. Support Edge Runtime if executed in an Edge environment
@@ -81,9 +84,7 @@ async function handleNodeRequest(req: VercelReq, res: VercelRes) {
 
     // 2. Resolve query parameters cleanly
     let queryString = '';
-    if (req.url && req.url.includes('?')) {
-      queryString = req.url.split('?')[1] || '';
-    } else if (req.query) {
+    if (req.query) {
       const qp = new URLSearchParams();
       for (const [key, val] of Object.entries(req.query)) {
         if (key === 'path') continue;
@@ -94,6 +95,11 @@ async function handleNodeRequest(req: VercelReq, res: VercelRes) {
         }
       }
       queryString = qp.toString();
+    } else if (req.url && req.url.includes('?')) {
+      // Fallback for edge cases where req.query is somehow missing
+      const urlParams = new URLSearchParams(req.url.split('?')[1]);
+      urlParams.delete('path');
+      queryString = urlParams.toString();
     }
 
     const targetUrl = `${UPSTREAM_BASE_URL}/${cleanPath}${queryString ? `?${queryString}` : ''}`;
