@@ -35,21 +35,19 @@ cd Ivy_home_assignment
 npm install
 ```
 
-Configure your environment variables in `.env` (refer to `.env.example`):
-```env
-IVY_BASE_URL=https://solve.ivy.homes
-IVY_API_KEY=your_api_key_here
-IVY_API_PASSWORD=your_demo_password_here
-IVY_ASSIGNED_LOCALITY=Hsr Layout
-```
+Configure your environment variables in `.env` (refer to `.env.example`).
+
 *(Note: `IVY_API_KEY` is maintained strictly server-side by the Vercel API proxy and is NEVER exposed to the client browser or bundled into frontend JavaScript).*
+
+### Viewing the Live Application
+You can view and execute the live deployed application here:
+[https://ivy-home-assignment-ten.vercel.app/](https://ivy-home-assignment-ten.vercel.app/)
 
 ### Running Locally (Development Mode)
 Start the local Vite development server:
 ```bash
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### Building for Production
 Validate TypeScript types and build the production bundle:
