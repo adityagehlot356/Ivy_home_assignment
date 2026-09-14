@@ -269,7 +269,7 @@ export async function getSavedListings(): Promise<SavedItem[]> {
 export async function saveListing(listingId: string): Promise<void> {
   await apiClient('/v1/saved', {
     method: 'POST',
-    body: JSON.stringify({ id: listingId }),
+    body: JSON.stringify({ listing_id: listingId }),
   });
 }
 
