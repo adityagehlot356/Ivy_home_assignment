@@ -46,36 +46,46 @@ async function handleNodeRequest(req: VercelReq, res: VercelRes) {
       return;
     }
 
-    // Determine path segments and query parameters
+    // 1. Resolve path segments cleanly from req.query.path or fallback to req.url
     let pathSegments = '';
-    const queryParams = new URLSearchParams();
+    if (req.query && req.query.path) {
+      if (Array.isArray(req.query.path)) {
+        pathSegments = req.query.path.join('/');
+      } else if (typeof req.query.path === 'string') {
+        pathSegments = req.query.path;
+      }
+    }
 
-    if (req.query) {
-      for (const [key, value] of Object.entries(req.query)) {
-        if (key === 'path') {
-          pathSegments = Array.isArray(value) ? value.join('/') : value;
-        } else if (Array.isArray(value)) {
-          for (const v of value) queryParams.append(key, v);
-        } else if (value !== undefined) {
-          queryParams.append(key, value);
+    // Defensive fallback: If pathSegments is empty or literal bracket placeholder, parse req.url
+    if (!pathSegments || pathSegments === '[...path]' || pathSegments === '[[...path]]') {
+      const rawUrl = req.url || '';
+      const pathname = rawUrl.split('?')[0];
+      pathSegments = pathname.replace(/^\/api\/?/, '');
+    }
+
+    // Sanitize any leading or trailing slashes
+    const cleanPath = pathSegments.replace(/^\/+|\/+$/g, '');
+
+    // 2. Resolve query parameters cleanly
+    let queryString = '';
+    if (req.url && req.url.includes('?')) {
+      queryString = req.url.split('?')[1] || '';
+    } else if (req.query) {
+      const qp = new URLSearchParams();
+      for (const [key, val] of Object.entries(req.query)) {
+        if (key === 'path') continue;
+        if (Array.isArray(val)) {
+          val.forEach((v) => qp.append(key, v));
+        } else if (val !== undefined) {
+          qp.append(key, val);
         }
       }
+      queryString = qp.toString();
     }
 
-    // Fallback path parsing from req.url
-    if (!pathSegments && req.url) {
-      const parsedUrl = new URL(req.url, 'http://localhost');
-      pathSegments = parsedUrl.pathname.replace(/^\/api\/?/, '');
-      if (!req.query) {
-        parsedUrl.searchParams.forEach((val, key) => queryParams.append(key, val));
-      }
-    }
-
-    const queryString = queryParams.toString();
-    const cleanPath = pathSegments.startsWith('/') ? pathSegments.slice(1) : pathSegments;
     const targetUrl = `${UPSTREAM_BASE_URL}/${cleanPath}${queryString ? `?${queryString}` : ''}`;
 
-    // Build headers to forward upstream
+    // 3. Build headers to forward upstream
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'X-API-Key': apiKey,
@@ -127,8 +137,12 @@ async function handleEdgeRequest(req: Request): Promise<Response> {
     }
 
     const incomingUrl = new URL(req.url);
-    const targetPath = incomingUrl.pathname.replace(/^\/api\/?/, '');
-    const targetUrl = `${UPSTREAM_BASE_URL}/${targetPath}${incomingUrl.search}`;
+    let targetPath = incomingUrl.pathname.replace(/^\/api\/?/, '');
+    if (targetPath === '[...path]' || targetPath === '[[...path]]') {
+      targetPath = '';
+    }
+    const cleanPath = targetPath.replace(/^\/+|\/+$/g, '');
+    const targetUrl = `${UPSTREAM_BASE_URL}/${cleanPath}${incomingUrl.search}`;
 
     const headers = new Headers();
     headers.set('Content-Type', 'application/json');
