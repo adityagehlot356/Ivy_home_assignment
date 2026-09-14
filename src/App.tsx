@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { BrowseView } from './views/BrowseView';
@@ -13,46 +13,68 @@ export const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<string>('browse');
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
 
-  // Sync hash routing with view state
+  // Parse direct SPA routes (e.g. /listing/100-1000042, /listings/100-1000042, /saved, or #/listing/...)
+  const parseRoute = useCallback(() => {
+    // Check pathname first, then hash fallback
+    const pathname = window.location.pathname.replace(/^\/+/, '');
+    const hash = window.location.hash.replace(/^#\/?/, '');
+    const rawTarget = pathname || hash;
+
+    // Handle listing detail routes: /listing/:id or /listings/:id
+    const listingMatch = rawTarget.match(/^listings?\/([^\/?#]+)/i);
+    if (listingMatch) {
+      const id = decodeURIComponent(listingMatch[1]);
+      setSelectedListingId(id);
+      setCurrentTab('detail');
+      return;
+    }
+
+    setSelectedListingId(null);
+    if (rawTarget.startsWith('saved')) {
+      setCurrentTab('saved');
+    } else if (
+      rawTarget.startsWith('rentals-projects') ||
+      rawTarget.startsWith('rentals') ||
+      rawTarget.startsWith('projects')
+    ) {
+      setCurrentTab('rentals-projects');
+    } else if (rawTarget.startsWith('insights')) {
+      setCurrentTab('insights');
+    } else if (rawTarget.startsWith('login')) {
+      setCurrentTab('login');
+    } else {
+      setCurrentTab('browse');
+    }
+  }, []);
+
+  // Listen for both popstate (browser forward/back) and hashchange
   useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '');
-      if (hash.startsWith('/listings/')) {
-        const id = hash.replace('/listings/', '');
-        if (id) {
-          setSelectedListingId(id);
-          setCurrentTab('detail');
-          return;
-        }
-      }
-
-      setSelectedListingId(null);
-      if (hash === 'saved') setCurrentTab('saved');
-      else if (hash === 'rentals-projects') setCurrentTab('rentals-projects');
-      else if (hash === 'insights') setCurrentTab('insights');
-      else if (hash === 'login') setCurrentTab('login');
-      else setCurrentTab('browse');
-    };
-
-    window.addEventListener('hashchange', handleHashChange);
-    handleHashChange(); // initial check
+    parseRoute();
+    window.addEventListener('popstate', parseRoute);
+    window.addEventListener('hashchange', parseRoute);
 
     return () => {
-      window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('popstate', parseRoute);
+      window.removeEventListener('hashchange', parseRoute);
     };
-  }, []);
+  }, [parseRoute]);
 
   const navigateToTab = (tab: string) => {
     setSelectedListingId(null);
     setCurrentTab(tab);
-    if (tab === 'browse') window.location.hash = '';
-    else window.location.hash = tab;
+    const newPath = tab === 'browse' ? '/' : `/${tab}`;
+    if (window.location.pathname !== newPath) {
+      window.history.pushState(null, '', newPath);
+    }
   };
 
   const navigateToDetail = (id: string) => {
     setSelectedListingId(id);
     setCurrentTab('detail');
-    window.location.hash = `/listings/${id}`;
+    const newPath = `/listing/${encodeURIComponent(id)}`;
+    if (window.location.pathname !== newPath) {
+      window.history.pushState(null, '', newPath);
+    }
   };
 
   if (isLoading) {
@@ -70,7 +92,7 @@ export const App: React.FC = () => {
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <Navbar currentTab="login" onSelectTab={navigateToTab} />
         <main style={{ flex: 1 }}>
-          <LoginView onLoginSuccess={() => navigateToTab('browse')} />
+          <LoginView onLoginSuccess={() => parseRoute()} />
         </main>
       </div>
     );
@@ -89,8 +111,6 @@ export const App: React.FC = () => {
           <RentalsProjectsView />
         ) : currentTab === 'insights' ? (
           <InsightsView />
-        ) : currentTab === 'login' ? (
-          <LoginView onLoginSuccess={() => navigateToTab('browse')} />
         ) : (
           <BrowseView onSelectListing={navigateToDetail} />
         )}

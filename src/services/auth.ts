@@ -58,7 +58,11 @@ export function getCurrentUser(): User | null {
   const userStr = localStorage.getItem('ivy_user');
   if (!userStr) return null;
   try {
-    return JSON.parse(userStr);
+    const u = JSON.parse(userStr);
+    if (u && !u.name && u.email) {
+      u.name = u.email.split('@')[0];
+    }
+    return u;
   } catch {
     return null;
   }

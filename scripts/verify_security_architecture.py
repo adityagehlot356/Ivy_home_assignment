@@ -130,6 +130,17 @@ if token:
     except Exception as e:
         check("Proxy listings (/api/v1/listings)", False, str(e))
 
+    # Direct Listing Detail
+    first_id = data.get("results", [{}])[0].get("listing_id")
+    if first_id:
+        try:
+            req = urllib.request.Request(f"{base_url}/v1/listings/{first_id}", headers=auth_headers)
+            with urllib.request.urlopen(req) as res:
+                data_detail = json.loads(res.read())
+                check(f"Direct listing detail (/api/v1/listings/{first_id})", res.status == 200 and data_detail.get("listing_id") == first_id)
+        except Exception as e:
+            check(f"Direct listing detail (/api/v1/listings/{first_id})", False, str(e))
+
     # Rentals
     try:
         req = urllib.request.Request(f"{base_url}/v1/rentals?limit=5", headers=auth_headers)
@@ -170,6 +181,16 @@ if token:
                 check("Proxy token refresh (/api/auth/refresh)", res.status == 200 and bool(data.get("access_token")))
         except Exception as e:
             check("Proxy token refresh (/api/auth/refresh)", False, str(e))
+
+# 4. Test SPA Client-Side Route Resolution
+print("\n--- 4. Direct SPA Route Resolution Tests ---")
+route_regex = re.compile(r"^listings?\/([^\/?#]+)", re.I)
+
+m1 = route_regex.match("listing/100-1000042")
+check("SPA direct route /listing/100-1000042 parsed", bool(m1) and m1.group(1) == "100-1000042")
+
+m2 = route_regex.match("listings/100-1000042")
+check("SPA direct route /listings/100-1000042 parsed", bool(m2) and m2.group(1) == "100-1000042")
 
 # 4. Inspect Git Diff for Secret Leakage
 print("\n--- 4. Git Working Tree & Secret Leakage Check ---")
