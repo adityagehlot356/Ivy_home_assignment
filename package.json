@@ -1,0 +1,38 @@
+{
+  "name": "ivy_home_assignment",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "**Candidate Submission Workspace · Bengaluru · September 2026**",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adityagehlot356/Ivy_home_assignment.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/adityagehlot356/Ivy_home_assignment/issues"
+  },
+  "homepage": "https://github.com/adityagehlot356/Ivy_home_assignment#readme",
+  "dependencies": {
+    "lucide-react": "^1.46.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  }
+}
