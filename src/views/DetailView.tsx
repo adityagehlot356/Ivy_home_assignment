@@ -253,7 +253,28 @@ export const DetailView: React.FC<DetailViewProps> = ({ listingId, onBack }) => 
           </p>
 
           <div style={{ marginTop: '2rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-subtle)' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem' }}>Geographic Coordinates</h3>
+            <div className="flex items-center justify-between" style={{ marginBottom: '0.75rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Geographic Coordinates</h3>
+              {(listing.latitude && listing.longitude) ? (
+                <a 
+                  href={`https://www.google.com/maps/search/?api=1&query=${listing.latitude},${listing.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1"
+                  style={{ 
+                    fontSize: '0.8rem', 
+                    fontWeight: 600, 
+                    color: '#60a5fa', 
+                    background: 'rgba(59, 130, 246, 0.1)', 
+                    padding: '0.3rem 0.6rem', 
+                    borderRadius: '12px',
+                    textDecoration: 'none'
+                  }}
+                >
+                  View on Map <ExternalLink size={12} />
+                </a>
+              ) : null}
+            </div>
             <div className="flex items-center gap-4" style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
               <div>Latitude: <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>{listing.latitude}</code></div>
               <div>Longitude: <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>{listing.longitude}</code></div>
