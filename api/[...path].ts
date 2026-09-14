@@ -128,6 +128,12 @@ async function handleNodeRequest(req: VercelReq, res: VercelRes) {
     if (contentType) {
       res.setHeader('Content-Type', contentType);
     }
+    
+    // Inject debug headers
+    res.setHeader('X-Debug-Target-Url', targetUrl);
+    res.setHeader('X-Debug-Clean-Path', cleanPath);
+    res.setHeader('X-Debug-Req-Url', req.url || 'none');
+    res.setHeader('X-Debug-Req-Query-Path', JSON.stringify(req.query?.path || 'none'));
 
     const textData = await upstreamResponse.text();
     res.send(textData);
