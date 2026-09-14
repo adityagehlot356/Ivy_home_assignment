@@ -9,12 +9,15 @@ import {
   MapPin, 
   ShieldCheck, 
   AlertTriangle,
-  Flame
+  Flame,
+  Scale
 } from 'lucide-react';
 
 interface ListingCardProps {
   listing: Listing;
   onViewDetail: (id: string) => void;
+  isSelectedForCompare?: boolean;
+  onToggleCompare?: (listing: Listing) => void;
 }
 
 export function formatINR(val: number): string {
@@ -28,13 +31,23 @@ export function formatINR(val: number): string {
   return `₹${val.toLocaleString('en-IN')}`;
 }
 
-export const ListingCard: React.FC<ListingCardProps> = ({ listing, onViewDetail }) => {
+export const ListingCard: React.FC<ListingCardProps> = ({ 
+  listing, 
+  onViewDetail,
+  isSelectedForCompare,
+  onToggleCompare
+}) => {
   const { isSaved, toggleSave } = useSaved();
   const saved = isSaved(listing.listing_id);
 
   const handleHeartClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     toggleSave(listing);
+  };
+
+  const handleCompareClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onToggleCompare) onToggleCompare(listing);
   };
 
   return (
@@ -78,23 +91,48 @@ export const ListingCard: React.FC<ListingCardProps> = ({ listing, onViewDetail 
             )}
           </div>
 
-          <button
-            onClick={handleHeartClick}
-            style={{
-              padding: '0.4rem',
-              borderRadius: '50%',
-              background: saved ? 'rgba(236, 72, 153, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-              border: saved ? '1px solid rgba(236, 72, 153, 0.4)' : '1px solid var(--border-subtle)',
-              color: saved ? '#ec4899' : 'var(--text-muted)',
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-            title={saved ? 'Remove from saved' : 'Save listing'}
-          >
-            <Heart size={18} fill={saved ? '#ec4899' : 'none'} />
-          </button>
+          <div className="flex items-center gap-2">
+            {onToggleCompare && (
+              <button
+                onClick={handleCompareClick}
+                style={{
+                  padding: '0.4rem 0.75rem',
+                  borderRadius: '16px',
+                  background: isSelectedForCompare ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                  border: isSelectedForCompare ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid var(--border-subtle)',
+                  color: isSelectedForCompare ? '#60a5fa' : 'var(--text-muted)',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  fontSize: '0.75rem',
+                  fontWeight: 600
+                }}
+                title={isSelectedForCompare ? 'Remove from compare' : 'Compare property'}
+              >
+                <Scale size={14} />
+                {isSelectedForCompare ? 'Selected' : 'Compare'}
+              </button>
+            )}
+
+            <button
+              onClick={handleHeartClick}
+              style={{
+                padding: '0.4rem',
+                borderRadius: '50%',
+                background: saved ? 'rgba(236, 72, 153, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                border: saved ? '1px solid rgba(236, 72, 153, 0.4)' : '1px solid var(--border-subtle)',
+                color: saved ? '#ec4899' : 'var(--text-muted)',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              title={saved ? 'Remove from saved' : 'Save listing'}
+            >
+              <Heart size={18} fill={saved ? '#ec4899' : 'none'} />
+            </button>
+          </div>
         </div>
 
         {/* Pricing */}
