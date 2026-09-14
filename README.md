@@ -38,14 +38,11 @@ npm install
 Configure your environment variables in `.env` (refer to `.env.example`):
 ```env
 IVY_BASE_URL=https://solve.ivy.homes
-IVY_API_KEY=IVY26-XXXXXXXXXXXX
-IVY_API_PASSWORD=<your_key_password>
+IVY_API_KEY=your_api_key_here
+IVY_API_PASSWORD=your_demo_password_here
 IVY_ASSIGNED_LOCALITY=Hsr Layout
-
-# Frontend Vite Variables
-VITE_API_BASE_URL=https://solve.ivy.homes
-VITE_API_KEY=IVY26-XXXXXXXXXXXX
 ```
+*(Note: `IVY_API_KEY` is maintained strictly server-side by the Vercel API proxy and is NEVER exposed to the client browser or bundled into frontend JavaScript).*
 
 ### Running Locally (Development Mode)
 Start the local Vite development server:
@@ -81,10 +78,12 @@ python scripts/solve_assignment.py
 The frontend is built with **React 19, TypeScript, and Vite**, styled with a custom vanilla CSS design system featuring dark mode glassmorphism and modern responsive layout primitives.
 
 ```
+api/
+└── [...path].ts            # Serverless reverse proxy: injects IVY_API_KEY server-side
 src/
 ├── types/api.ts             # Domain models (Listings, Rentals, Projects, Saved, Auth)
 ├── services/
-│   ├── api.ts              # Resilient HTTP client: dual-auth headers & 401 transparent token refresh
+│   ├── api.ts              # Resilient HTTP client: relative /api/* requests & 401 token refresh
 │   ├── auth.ts             # Session management & proactive background refresh (>30m persistence)
 │   └── dataService.ts      # Normalization layer: unit conversions, corruption flags, fallback filters
 ├── context/
@@ -99,18 +98,20 @@ src/
 │   ├── Pagination.tsx      # Offset/limit pagination controls
 │   └── AlertBanner.tsx     # Reusable error, loading, and empty state containers
 └── views/
-    ├── LoginView.tsx       # Authentication view with demo selectors & real credentials
+    ├── LoginView.tsx       # Authentication view with demo selectors & clean password entry
     ├── BrowseView.tsx      # Paginated listings browse with server + client fallback filtering
-    ├── DetailView.tsx      # Dedicated URL route (`#/listings/:id`) per listing with full metadata
+    ├── DetailView.tsx      # Dedicated direct URL route (`/listing/:id`) with full metadata & direct link support
     ├── SavedView.tsx       # Per-user persistent saved properties
     ├── RentalsProjectsView.tsx # Dual tab view for Rentals and Builder Developments
     └── InsightsView.tsx    # Empirical market insights & verified discrepancy matrix
 ```
 
 ### Core Architectural Defenses
-1. **Centralized Resilient Client (`src/services/api.ts`)**:
-   - Injects the required `X-API-Key` header and `Authorization: Bearer <access_token>` header on all `/v1/*` requests (defeating the documentation claim that the key is passed via query parameter `?api_key=...`).
-   - Transparently handles the 15-minute token expiration. On any `401 Unauthorized`, pending requests are queued, `POST /auth/refresh` is executed, and requests are retried without user disruption.
+1. **Server-Side API Proxy & Zero Client Credential Exposure (`api/[...path].ts`)**:
+   - The secret `IVY_API_KEY` is maintained strictly on the server via `process.env.IVY_API_KEY` (no `VITE_` prefix, preventing Vite from baking the key into client bundles).
+   - The browser frontend exclusively calls relative `/api/*` endpoints and sends only user Bearer tokens (`Authorization: Bearer <access_token>`).
+   - The serverless reverse proxy automatically injects the `X-API-Key` header upstream to `https://solve.ivy.homes`, completely hiding credentials from client-side network inspectors and DevTools.
+   - Transparently handles the 15-minute token expiration: on any `401 Unauthorized`, pending requests are queued, `POST /api/auth/refresh` is executed, and requests are retried without user disruption.
 2. **Session Persistence & Proactive Heartbeat (`src/services/auth.ts`)**:
    - Persists tokens and user details in `localStorage` so sessions survive page reloads.
    - Runs a proactive interval timer every 60 seconds: when less than 3 minutes remain on the 15-minute token, it automatically requests a renewed token from `/auth/refresh`. This ensures the session continues working uninterrupted for $>30$ minutes.
@@ -164,7 +165,7 @@ All 20 personally verified discrepancies are summarized below with concrete evid
 
 | # | Endpoint | Category | Documented Behavior | Actual Live API Behavior | Frontend Mitigation | Evidence IDs |
 |---|----------|----------|---------------------|--------------------------|---------------------|--------------|
-| 1 | `*` | `auth` | Key in query parameter `?api_key=...` | Key rejected with 401; must be sent in `X-API-Key` header | `apiClient` injects `X-API-Key` header on every call | *(Behavioral)* |
+| 1 | `*` | `auth` | Key in query parameter `?api_key=...` | Key rejected with 401; must be sent in `X-API-Key` header | Server-side API proxy injects `X-API-Key` upstream; secret never exposed to browser | *(Behavioral)* |
 | 2 | `/auth/login` | `auth` | Returns `token`, valid 24h, no refresh flow | Returns `access_token`, expires in 15m (900s), refresh flow at `/auth/refresh` | Proactive background refresher keeps session active $>30$m | *(Behavioral)* |
 | 3 | `*` | `auth` | Collection endpoints only need API key | All `/v1/*` endpoints require both `X-API-Key` and Bearer token | Mandatory login screen before collection browsing | *(Behavioral)* |
 | 4 | `/v1/listings` | `pagination` | `page` and `limit`; response contains `page`, `page_size` | `page` ignored; uses `offset` and `limit`; response has `offset`, `has_more` | `Pagination` component calculates offsets exclusively | `MAG-1002627`, `100-1003403` |
