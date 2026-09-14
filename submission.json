@@ -43,7 +43,6 @@
       "ZER-1003426"
     ],
     "total_monthly_rent": 6678300,
-    "avg_price_per_sqft_2bhk": 11475.09,
     "costliest_project": {
       "project_id": "P10255",
       "price_max_inr": 48900000
@@ -63,6 +62,7 @@
       "ZER-1003652",
       "ZER-1003813"
     ],
+    "avg_price_per_sqft_2bhk": 11475.09,
     "projects_with_wrong_listing_count": 378
   },
   "findings": [
